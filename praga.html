@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Orologio Astronomico di Praga</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            font-family: 'Georgia', serif;
+        }
+        
+        #container {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+        
+        svg {
+            filter: drop-shadow(0 10px 20px rgba(0, 0, 0, 0.3));
+        }
+        
+        .clock-face {
+            fill: #f4e4c1;
+            stroke: #8b7355;
+            stroke-width: 3;
+        }
+        
+        .outer-ring {
+            fill: none;
+            stroke: #8b7355;
+            stroke-width: 2;
+        }
+        
+        .zodiac-ring {
+            fill: #e8d4a8;
+            stroke: #8b7355;
+            stroke-width: 2;
+        }
+        
+        .hour-line {
+            stroke: #5c4a3a;
+            stroke-width: 2;
+        }
+        
+        .text {
+            fill: #3a2f1f;
+            font-family: 'Georgia', serif;
+            text-anchor: middle;
+        }
+        
+        .roman {
+            font-size: 24px;
+            font-weight: bold;
+        }
+        
+        .zodiac-text {
+            font-size: 16px;
+            font-weight: bold;
+        }
+        
+        .hand {
+            stroke-linecap: round;
+        }
+        
+        .sun {
+            fill: #ffd700;
+            stroke: #ff8c00;
+            stroke-width: 2;
+        }
+        
+        .moon {
+            fill: #e0e0e0;
+            stroke: #999;
+            stroke-width: 2;
+        }
+        
+        .center-dot {
+            fill: #5c4a3a;
+        }
+        
+        .sky-day {
+            fill: #87ceeb;
+            opacity: 0.3;
+        }
+        
+        .sky-night {
+            fill: #1a1a2e;
+            opacity: 0.3;
+        }
+        
+        .horizon {
+            stroke: #8b7355;
+            stroke-width: 3;
+            fill: none;
+        }
+        
+        .calendar-face {
+            fill: #d4c4a8;
+            stroke: #8b7355;
+            stroke-width: 2;
+        }
+        
+        .month-text {
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div id="container">
+        <svg width="800" height="800" viewBox="0 0 800 800">
+            <defs>
+                <!-- Gradiente per il cielo -->
+                <radialGradient id="skyGradient">
+                    <stop offset="0%" style="stop-color:#87ceeb;stop-opacity:0.5" />
+                    <stop offset="100%" style="stop-color:#1a1a2e;stop-opacity:0.5" />
+                </radialGradient>
+                
+                <!-- Pattern decorativo -->
+                <pattern id="decorPattern" x="0" y="0" width="20" height="20" patternUnits="userSpaceOnUse">
+                    <circle cx="10" cy="10" r="1" fill="#8b7355" opacity="0.2"/>
+                </pattern>
+            </defs>
+            
+            <!-- Quadrante principale astronomico -->
+            <g id="astronomicalDial" transform="translate(400, 300)">
+                <!-- Sfondo del quadrante -->
+                <circle class="clock-face" r="250" fill="url(#decorPattern)"/>
+                
+                <!-- Cielo (giorno/notte) -->
+                <path id="skyDay" class="sky-day" d="M 0,-250 A 250,250 0 0,1 0,250 Z"/>
+                <path id="skyNight" class="sky-night" d="M 0,-250 A 250,250 0 0,0 0,250 Z"/>
+                
+                <!-- Orizzonte -->
+                <line class="horizon" x1="-250" y1="0" x2="250" y2="0"/>
+                
+                <!-- Cerchi orari (24 ore) -->
+                <g id="hourCircles">
+                    <circle class="outer-ring" r="230" opacity="0.3"/>
+                    <circle class="outer-ring" r="210" opacity="0.3"/>
+                    <circle class="outer-ring" r="190" opacity="0.3"/>
+                    <circle class="outer-ring" r="170" opacity="0.3"/>
+                </g>
+                
+                <!-- Linee delle ore -->
+                <g id="hourLines"></g>
+                
+                <!-- Numeri romani (ore) -->
+                <g id="romanNumerals"></g>
+                
+                <!-- Anello zodiacale -->
+                <circle class="zodiac-ring" r="200" fill="none"/>
+                
+                <!-- Segni zodiacali -->
+                <g id="zodiacSigns"></g>
+                
+                <!-- Lancetta del Sole -->
+                <g id="sunHand">
+                    <line x1="0" y1="0" x2="0" y2="-150" stroke="#ff8c00" stroke-width="4" class="hand"/>
+                    <circle class="sun" r="20" cy="-150"/>
+                </g>
+                
+                <!-- Lancetta della Luna -->
+                <g id="moonHand">
+                    <line x1="0" y1="0" x2="0" y2="-120" stroke="#999" stroke-width="3" class="hand"/>
+                    <circle class="moon" r="15" cy="-120"/>
+                </g>
+                
+                <!-- Lancetta dei secondi -->
+                <g id="secondHand">
+                    <line x1="0" y1="0" x2="0" y2="-180" stroke="#8b0000" stroke-width="2" class="hand"/>
+                    <circle fill="#8b0000" r="4" cy="-180"/>
+                </g>
+                
+                <!-- Centro -->
+                <circle class="center-dot" r="8"/>
+            </g>
+            
+            <!-- Calendario zodiacale inferiore -->
+            <g id="calendar" transform="translate(400, 650)">
+                <!-- Sfondo calendario -->
+                <circle class="calendar-face" r="120"/>
+                
+                <!-- Divisioni mesi -->
+                <g id="monthDivisions"></g>
+                
+                <!-- Nomi dei mesi -->
+                <g id="monthNames"></g>
+                
+                <!-- Indicatore giorno corrente -->
+                <g id="dayIndicator">
+                    <line x1="0" y1="0" x2="0" y2="-100" stroke="#8b0000" stroke-width="3" class="hand"/>
+                    <circle fill="#8b0000" r="6" cy="-100"/>
+                </g>
+                
+                <!-- Centro -->
+                <circle class="center-dot" r="6"/>
+            </g>
+            
+            <!-- Decorazioni -->
+            <g id="decorations">
+                <text x="400" y="80" class="text" style="font-size: 32px; font-weight: bold;">ORLOJ</text>
+                <text x="400" y="110" class="text" style="font-size: 18px;">Praha</text>
+            </g>
+        </svg>
+    </div>
+
+    <script>
+        // Costanti
+        const CENTER_X = 400;
+        const CENTER_Y = 300;
+        const CALENDAR_Y = 650;
+        
+        // Numeri romani
+        const romanNumerals = ['XII', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI'];
+        
+        // Segni zodiacali (simboli Unicode)
+        const zodiacSigns = [
+            {name: '♈', angle: 0},    // Ariete
+            {name: '♉', angle: 30},   // Toro
+            {name: '♊', angle: 60},   // Gemelli
+            {name: '♋', angle: 90},   // Cancro
+            {name: '♌', angle: 120},  // Leone
+            {name: '♍', angle: 150},  // Vergine
+            {name: '♎', angle: 180},  // Bilancia
+            {name: '♏', angle: 210},  // Scorpione
+            {name: '♐', angle: 240},  // Sagittario
+            {name: '♑', angle: 270},  // Capricorno
+            {name: '♒', angle: 300},  // Acquario
+            {name: '♓', angle: 330}   // Pesci
+        ];
+        
+        // Mesi abbreviati
+        const months = ['GEN', 'FEB', 'MAR', 'APR', 'MAG', 'GIU', 'LUG', 'AGO', 'SET', 'OTT', 'NOV', 'DIC'];
+        
+        // Inizializza il quadrante
+        function initClock() {
+            // Crea linee delle ore (24 linee)
+            const hourLinesGroup = document.getElementById('hourLines');
+            for (let i = 0; i < 24; i++) {
+                const angle = (i * 15 - 90) * Math.PI / 180;
+                const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                line.setAttribute('class', 'hour-line');
+                line.setAttribute('x1', Math.cos(angle) * 240);
+                line.setAttribute('y1', Math.sin(angle) * 240);
+                line.setAttribute('x2', Math.cos(angle) * 250);
+                line.setAttribute('y2', Math.sin(angle) * 250);
+                hourLinesGroup.appendChild(line);
+            }
+            
+            // Crea numeri romani (12 ore)
+            const numeralsGroup = document.getElementById('romanNumerals');
+            for (let i = 0; i < 12; i++) {
+                const angle = (i * 30 - 90) * Math.PI / 180;
+                const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                text.setAttribute('class', 'text roman');
+                text.setAttribute('x', Math.cos(angle) * 220);
+                text.setAttribute('y', Math.sin(angle) * 220 + 8);
+                text.textContent = romanNumerals[i];
+                numeralsGroup.appendChild(text);
+            }
+            
+            // Crea segni zodiacali
+            const zodiacGroup = document.getElementById('zodiacSigns');
+            zodiacSigns.forEach(sign => {
+                const angle = (sign.angle - 90) * Math.PI / 180;
+                const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                text.setAttribute('class', 'text zodiac-text');
+                text.setAttribute('x', Math.cos(angle) * 180);
+                text.setAttribute('y', Math.sin(angle) * 180 + 6);
+                text.textContent = sign.name;
+                zodiacGroup.appendChild(text);
+            });
+            
+            // Crea divisioni mesi nel calendario
+            const monthDivGroup = document.getElementById('monthDivisions');
+            for (let i = 0; i < 12; i++) {
+                const angle = (i * 30 - 90) * Math.PI / 180;
+                const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                line.setAttribute('class', 'hour-line');
+                line.setAttribute('x1', Math.cos(angle) * 110);
+                line.setAttribute('y1', Math.sin(angle) * 110);
+                line.setAttribute('x2', Math.cos(angle) * 120);
+                line.setAttribute('y2', Math.sin(angle) * 120);
+                monthDivGroup.appendChild(line);
+            }
+            
+            // Crea nomi mesi
+            const monthNamesGroup = document.getElementById('monthNames');
+            months.forEach((month, i) => {
+                const angle = (i * 30 - 90 + 15) * Math.PI / 180; // +15 per centrare
+                const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                text.setAttribute('class', 'text month-text');
+                text.setAttribute('x', Math.cos(angle) * 90);
+                text.setAttribute('y', Math.sin(angle) * 90 + 5);
+                text.textContent = month;
+                monthNamesGroup.appendChild(text);
+            });
+        }
+        
+        // Aggiorna l'orologio
+        function updateClock() {
+            const now = new Date();
+            
+            // Ore in formato 24h
+            const hours = now.getHours();
+            const minutes = now.getMinutes();
+            const seconds = now.getSeconds();
+            
+            // Calcola angoli
+            // Il sole fa un giro completo in 24 ore
+            const sunAngle = ((hours + minutes / 60 + seconds / 3600) * 15) - 90;
+            
+            // La luna segue un ciclo approssimativo (semplificato)
+            // In realtà dovrebbe seguire il ciclo lunare, qui usiamo un'approssimazione
+            const moonAngle = ((hours + minutes / 60) * 15 + 180) - 90;
+            
+            // Aggiorna lancette
+            document.getElementById('sunHand').setAttribute('transform', `rotate(${sunAngle})`);
+            document.getElementById('moonHand').setAttribute('transform', `rotate(${moonAngle})`);
+            
+            // Lancetta dei secondi (giro completo in 60 secondi)
+            const secondAngle = (seconds * 6) - 90;
+            document.getElementById('secondHand').setAttribute('transform', `rotate(${secondAngle})`);
+            
+            // Calendario - angolo basato sul giorno dell'anno
+            const startOfYear = new Date(now.getFullYear(), 0, 0);
+            const diff = now - startOfYear;
+            const oneDay = 1000 * 60 * 60 * 24;
+            const dayOfYear = Math.floor(diff / oneDay);
+            const calendarAngle = (dayOfYear / 365 * 360) - 90;
+            
+            document.getElementById('dayIndicator').setAttribute('transform', `rotate(${calendarAngle})`);
+        }
+        
+        // Inizializza
+        initClock();
+        updateClock();
+        
+        // Aggiorna ogni secondo
+        setInterval(updateClock, 1000);
+    </script>
+</body>
+</html>

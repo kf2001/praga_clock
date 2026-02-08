@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Orologio di Praga in SVG</title>
+    <style>
+        .clock {
+            stroke: #000;
+            stroke-width: 2;
+            fill: none;
+        }
+        .hand {
+            fill: #000;
+            stroke: #000;
+            stroke-width: 1;
+        }
+    </style>
+</head>
+<body>
+    <svg width="200" height="200" viewBox="0 0 200 200">
+        <circle cx="100" cy="100" r="90" class="clock" />
+        <line id="hourHand" class="hand" x1="100" y1="100" x2="100" y2="50" />
+        <line id="minuteHand" class="hand" x1="100" y1="100" x2="100" y2="30" />
+        <circle cx="100" cy="100" r="5" fill="#000" />
+    </svg>
+
+    <script>
+        function updateClock() {
+            const now = new Date();
+            const seconds = now.getSeconds();
+            const minutes = now.getMinutes();
+            const hours = now.getHours() % 12; // 12-hour format
+
+            // Calcolo degli angoli
+            const hourAngle = ((hours + minutes / 60) * 30) - 90; // 30 gradi per ogni ora
+            const minuteAngle = ((minutes + seconds / 60) * 6) - 90; // 6 gradi per ogni minuto
+
+            // Aggiornamento delle mani
+            const hourHand = document.getElementById('hourHand');
+            const minuteHand = document.getElementById('minuteHand');
+
+            hourHand.setAttribute('x2', 100 + 40 * Math.cos(hourAngle * Math.PI / 180));
+            hourHand.setAttribute('y2', 100 + 40 * Math.sin(hourAngle * Math.PI / 180));
+            minuteHand.setAttribute('x2', 100 + 60 * Math.cos(minuteAngle * Math.PI / 180));
+            minuteHand.setAttribute('y2', 100 + 60 * Math.sin(minuteAngle * Math.PI / 180));
+        }
+
+        setInterval(updateClock, 1000);
+        updateClock(); // Prima chiamata per inizializzare
+    </script>
+</body>
+</html>
