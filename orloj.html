@@ -98,18 +98,38 @@
             </g>
 
         </g>
-<g id="bohemian-hand">
-  <line x1="0" y1="20" x2="0" y2="-150"
-        stroke="#ffd966"
-        stroke-width="6"
-        stroke-dasharray="6 4"/>
-</g>
+        <g id="bohemian-hand">
+            <line x1="0" y1="20" x2="0" y2="-150" stroke="#ffd966" stroke-width="6" stroke-dasharray="6 4" />
+        </g>
 
         <!-- Luna semplice -->
-        <g id="moon-hand">
+       <!--  <g id="moon-hand">
             <line x1="0" y1="0" x2="0" y2="-100" stroke="silver" stroke-width="2" />
             <circle cx="0" cy="-100" r="6" fill="silver" />
-        </g>
+        </g> -->
+        <!-- Luna con fase -->
+<g id="moon-hand">
+  <line x1="0" y1="0" x2="0" y2="-100"
+        stroke="silver" stroke-width="2"/>
+
+  <g transform="translate(0,-100)">
+    <defs>
+      <mask id="moon-mask">
+        <!-- tutto visibile -->
+        <rect x="-20" y="-20" width="40" height="40" fill="white"/>
+        <!-- ombra mobile -->
+        <circle id="moon-shadow"
+                cx="0" cy="0" r="8"
+                fill="black"/>
+      </mask>
+    </defs>
+
+    <!-- disco lunare -->
+    <circle r="8" fill="#e0e0e0" mask="url(#moon-mask)"/>
+    <circle r="8" fill="none" stroke="#aaa" stroke-width="1"/>
+  </g>
+</g>
+
         <circle r="6" fill="#ccc" />
     </svg>
 
@@ -121,10 +141,15 @@
         const sun = document.getElementById("sun-ecliptic");
         const moon = document.getElementById("moon-hand");
         const lat = 50.0755 * Math.PI / 180; // Praga
-const bohemianHand =
-  document.getElementById("bohemian-hand");
+        const bohemianHand =
+            document.getElementById("bohemian-hand");
 
-let bohemianHour;
+        let bohemianHour;
+
+        const moonShadow = document.getElementById("moon-shadow");
+const synodicMonth = 29.53059; // giorni
+const refNewMoon = new Date("2024-01-11T11:57:00Z"); // luna nuova reale
+
         /* ===== ORE ===== */
         for (let h = 0; h < 24; h++) {
             const angle = h * 15;
@@ -170,7 +195,7 @@ let bohemianHour;
 
         /* ===== TEMPO ===== */
         const yearDays = 365.2422;
-        const springEquinox = new Date("2024-03-20T03:00:00Z");
+        const springEquinox = new Date("2026-03-20T03:00:00Z");
 
         function update() {
             const now = new Date();
@@ -184,7 +209,7 @@ let bohemianHour;
                 now.getMinutes() / 60 +
                 now.getSeconds() / 3600;
 
-            const lat = 50.0755 * Math.PI / 180; // Praga
+
 
             const sunAngle = hours * 15;
             sun.setAttribute(
@@ -209,8 +234,10 @@ let bohemianHour;
             );
 
             /* Segno attivo */
-            const solarLongitude =
-                (sunAngle + zodiacAngle + 360) % 360;
+            //  const solarLongitude =
+            //    (sunAngle + zodiacAngle + 360) % 360;
+
+            const solarLongitude = (zodiacAngle + 360) % 360;
 
             const activeSign =
                 Math.floor(solarLongitude / 30);
@@ -228,7 +255,7 @@ let bohemianHour;
                 "transform",
                 `rotate(${sunAngle * 0.9})`
             );
-            
+
             const cosH =
                 -Math.tan(lat) * Math.tan(declination);
 
@@ -243,11 +270,11 @@ let bohemianHour;
             // orari
             const sunrise = 12 - dayLength / 2;
             const sunset = 12 + dayLength / 2;
-            
-bohemianHand.setAttribute(
-  "transform",
-  `rotate(${bohemianHour * 15 - 90})`
-);
+
+            bohemianHand.setAttribute(
+                "transform",
+                `rotate(${bohemianHour * 15 - 90})`
+            );
 
             const nowHours =
                 now.getHours() +
@@ -263,7 +290,27 @@ bohemianHand.setAttribute(
                     ((nowHours + (24 - sunset)) * 24) /
                     (24 - dayLength);
             }
+// giorni dalla luna nuova di riferimento
+const moonDays =
+  (now - refNewMoon) /
+  (1000 * 60 * 60 * 24);
 
+// fase 0–1
+const phase =
+  ((moonDays % synodicMonth) + synodicMonth) %
+  synodicMonth / synodicMonth;
+
+let offset;
+
+if (phase < 0.5) {
+  // Luna crescente
+  offset = (0.5 - phase) * 16;
+} else {
+  // Luna calante
+  offset = (phase - 0.5) * -16;
+}
+
+moonShadow.setAttribute("cx", offset);
 
             /* ===== LANCETTE CLASSICHE ===== */
             const s = now.getSeconds() + now.getMilliseconds() / 1000;
