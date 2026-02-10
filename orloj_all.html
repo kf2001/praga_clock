@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="it">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Orloj – SVG + JS</title>
+
+    <style>
+        body {
+            margin: 0;
+            background: #111;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            color: white;
+            font-family: sans-serif;
+        }
+
+        svg {
+            background: #1b1b1b;
+            border-radius: 50%;
+        }
+
+        text {
+            text-anchor: middle;
+            dominant-baseline: middle;
+            fill: #ddd;
+            font-size: 14px;
+        }
+
+        .zodiac {
+            fill: #c9a24d;
+            font-size: 22px;
+            transition: fill 0.3s, filter 0.3s;
+        }
+
+        .zodiac.active {
+            fill: #ffe28a;
+            filter: drop-shadow(0 0 4px #ffe28a);
+        }
+    </style>
+</head>
+
+<body>
+
+    <svg viewBox="-200 -200 400 400" width="520">
+
+        <!-- bordo -->
+        <circle r="190" fill="none" stroke="#888" stroke-width="4" />
+
+        <!-- arco giorno / notte -->
+        <g id="day-night">
+            <!-- notte -->
+            <path d="M 0 -170 A 170 170 0 0 0 0 170" stroke="#1c2a44" stroke-width="40" fill="none" />
+            <!-- giorno -->
+            <path d="M 0 170 A 170 170 0 0 0 0 -170" stroke="#d6c27a" stroke-width="40" fill="none" />
+        </g>
+
+        <!-- ore -->
+        <g id="hours"></g>
+
+        <!-- ROTAZIONE GIORNALIERA DEL CIELO -->
+<g id="daily-rotation">
+
+  <!-- ECLITTICA nuova-->
+  <g id="ecliptic-tilt" transform="rotate(-23.44)">
+    <g id="ecliptic-scale" transform="scale(1,0.92)">
+
+      <!-- ZODIACO -->
+      <g id="zodiac-ring">
+        <circle r="120"
+                fill="none"
+                stroke="#c9a24d"
+                stroke-width="3"/>
+        <g id="zodiac-symbols"></g>
+      </g>
+
+      <!-- SOLE: POSIZIONE ANNUALE -->
+      <g id="sun-ecliptic">
+        <circle cx="0" cy="-120" r="8" fill="gold"/>
+      </g>
+
+      <!-- LUNA -->
+      <g id="moon-hand">
+        <line x1="0" y1="0" x2="0" y2="-100"
+              stroke="silver" stroke-width="2"/>
+        <g transform="translate(0,-100)">
+          <circle r="8" fill="#e0e0e0"/>
+        </g>
+      </g>
+
+    </g>
+  </g>
+
+</g>
+
+        <!-- ECLITTICA -->
+       
+
+        <!-- lancette orologio -->
+        <g id="clock-hands">
+
+            <!-- ore -->
+            <g id="hour-hand">
+                <line x1="0" y1="10" x2="0" y2="-70" stroke="#eee" stroke-width="6" stroke-linecap="round" />
+            </g>
+
+            <!-- minuti -->
+            <g id="minute-hand">
+                <line x1="0" y1="15" x2="0" y2="-110" stroke="#ddd" stroke-width="4" stroke-linecap="round" />
+            </g>
+
+            <!-- secondi -->
+            <g id="second-hand">
+                <line x1="0" y1="20" x2="0" y2="-130" stroke="#ff5555" stroke-width="2" stroke-linecap="round" />
+            </g>
+
+        </g>
+        <g id="bohemian-hand">
+            <line x1="0" y1="20" x2="0" y2="-150" stroke="#ffd966" stroke-width="6" stroke-dasharray="6 4" />
+        </g>
+
+        <!-- Luna semplice -->
+       <!--  <g id="moon-hand">
+            <line x1="0" y1="0" x2="0" y2="-100" stroke="silver" stroke-width="2" />
+            <circle cx="0" cy="-100" r="6" fill="silver" />
+        </g> -->
+        <!-- Luna con fase -->
+<g id="moon-hand">
+  <line x1="0" y1="0" x2="0" y2="-100"
+        stroke="silver" stroke-width="2"/>
+
+  <g transform="translate(0,-100)">
+    <defs>
+      <mask id="moon-mask">
+        <!-- tutto visibile -->
+        <rect x="-20" y="-20" width="40" height="40" fill="white"/>
+        <!-- ombra mobile -->
+        <circle id="moon-shadow"
+                cx="0" cy="0" r="8"
+                fill="black"/>
+      </mask>
+    </defs>
+
+    <!-- disco lunare -->
+    <circle r="8" fill="#e0e0e0" mask="url(#moon-mask)"/>
+    <circle r="8" fill="none" stroke="#aaa" stroke-width="1"/>
+  </g>
+</g>
+
+        <circle r="6" fill="#ccc" />
+    </svg>
+
+    <script>
+        /* ===== RIFERIMENTI ===== */
+        const hoursGroup = document.getElementById("hours");
+        const zodiacGroup = document.getElementById("zodiac-symbols");
+       
+        
+      
+        const dailyRotation = document.getElementById("daily-rotation");
+const zodiacRing    = document.getElementById("zodiac-ring");
+const sun           = document.getElementById("sun-ecliptic");
+const moon          = document.getElementById("moon-hand");
+
+        const lat = 50.0755 * Math.PI / 180; // Praga
+        const bohemianHand =
+            document.getElementById("bohemian-hand");
+
+        let bohemianHour;
+
+        const moonShadow = document.getElementById("moon-shadow");
+const yearDays = 365.2422;
+const springEquinox = new Date("2024-03-20T03:00:00Z");
+
+const synodicMonth  = 29.53059;
+const siderealMonth = 27.32166;
+const refNewMoon    = new Date("2024-01-11T11:57:00Z");
+
+
+        /* ===== ORE ===== */
+        for (let h = 0; h < 24; h++) {
+            const angle = h * 15;
+            const r = 160;
+
+            const x = r * Math.sin(angle * Math.PI / 180);
+            const y = -r * Math.cos(angle * Math.PI / 180);
+
+            const t = document.createElementNS(
+                "http://www.w3.org/2000/svg", "text"
+            );
+            t.setAttribute("x", x);
+            t.setAttribute("y", y);
+            t.textContent = h;
+            hoursGroup.appendChild(t);
+        }
+
+        /* ===== ZODIACO ===== */
+        const zodiac = [
+            "\u2648", "\u2649", "\u264A", "\u264B",
+            "\u264C", "\u264D", "\u264E", "\u264F",
+            "\u2650", "\u2651", "\u2652", "\u2653"
+        ];
+
+        zodiac.forEach((sign, i) => {
+            const angle = i * 30;
+            const r = 120;
+
+            const x = r * Math.sin(angle * Math.PI / 180);
+            const y = -r * Math.cos(angle * Math.PI / 180);
+
+            const t = document.createElementNS(
+                "http://www.w3.org/2000/svg", "text"
+            );
+            t.setAttribute("x", x);
+            t.setAttribute("y", y);
+            t.setAttribute("class", "zodiac");
+            t.setAttribute("data-index", i);
+            t.textContent = sign;
+
+            zodiacGroup.appendChild(t);
+        });
+
+        /* ===== TEMPO ===== */
+
+
+
+
+
+
+
+
+
+        
+        function update() {
+            const now = new Date();
+           
+
+  /* ===== ROTAZIONE GIORNALIERA DEL CIELO ===== */
+  const dailyAngle =
+    (now.getHours() +
+     now.getMinutes() / 60 +
+     now.getSeconds() / 3600) * 15;
+
+  dailyRotation.setAttribute(
+    "transform",
+    `rotate(${dailyAngle - 90})`
+  );
+/* ===== POSIZIONE ANNUALE DEL SOLE ===== */
+  const sunYearAngle =
+    ((now - springEquinox) /
+    (1000 * 60 * 60 * 24 * yearDays)) * 360;
+
+  sun.setAttribute(
+    "transform",
+    `rotate(${sunYearAngle})`
+  );
+
+  zodiacRing.setAttribute(
+    "transform",
+    `rotate(${sunYearAngle})`
+  );
+  /* ===== SEGNO ZODIACALE ATTIVO ===== */
+  const solarLongitude =
+    ((sunYearAngle % 360) + 360) % 360;
+
+  const activeSign =
+    Math.floor(solarLongitude / 30);
+
+  document.querySelectorAll(".zodiac")
+    .forEach(el => {
+      el.classList.toggle(
+        "active",
+        Number(el.dataset.index) === activeSign
+      );
+    });
+            const hourHand = document.getElementById("hour-hand");
+            const minuteHand = document.getElementById("minute-hand");
+            const secondHand = document.getElementById("second-hand");
+
+            /* Sole giornaliero */
+            const hours =
+                now.getHours() +
+                now.getMinutes() / 60 +
+                now.getSeconds() / 3600;
+
+
+
+            const sunAngle = hours * 15;
+            sun.setAttribute(
+                "transform",
+                `rotate(${sunAngle - 90})`
+            );
+
+            /* Zodiaco annuale */
+            const zodiacAngle =
+                ((now - springEquinox) /
+                    (1000 * 60 * 60 * 24 * yearDays)) * 360;
+            // declinazione solare (approssimata)
+            const declination =
+                Math.asin(
+                    Math.sin(23.44 * Math.PI / 180) *
+                    Math.sin(zodiacAngle * Math.PI / 180)
+                );
+
+            zodiacRing.setAttribute(
+                "transform",
+                `rotate(${zodiacAngle})`
+            );
+
+            /* Segno attivo */
+            //  const solarLongitude =
+            //    (sunAngle + zodiacAngle + 360) % 360;
+
+          /* ===== LUNA: ORBITA ===== */
+  const moonDays =
+    (now - refNewMoon) /
+    (1000 * 60 * 60 * 24);
+
+  const moonOrbitAngle =
+    (moonDays / siderealMonth) * 360;
+
+  moon.setAttribute(
+    "transform",
+    `rotate(${moonOrbitAngle})`
+  ); 
+            document.querySelectorAll(".zodiac")
+                .forEach(el => {
+                    el.classList.toggle(
+                        "active",
+                        Number(el.dataset.index) === activeSign
+                    );
+                });
+
+            /* Luna semplice */
+            moon.setAttribute(
+                "transform",
+                `rotate(${sunAngle * 0.9})`
+            );
+
+            const cosH =
+                -Math.tan(lat) * Math.tan(declination);
+
+            // clamp per sicurezza
+            const H = Math.acos(
+                Math.min(1, Math.max(-1, cosH))
+            );
+
+            // durata giorno in ore
+            const dayLength = (2 * H * 24) / (2 * Math.PI);
+
+            // orari
+            const sunrise = 12 - dayLength / 2;
+            const sunset = 12 + dayLength / 2;
+
+            bohemianHand.setAttribute(
+                "transform",
+                `rotate(${bohemianHour * 15 - 90})`
+            );
+
+            const nowHours =
+                now.getHours() +
+                now.getMinutes() / 60 +
+                now.getSeconds() / 3600;
+
+            if (nowHours >= sunset) {
+                bohemianHour =
+                    ((nowHours - sunset) * 24) /
+                    (24 - dayLength);
+            } else {
+                bohemianHour =
+                    ((nowHours + (24 - sunset)) * 24) /
+                    (24 - dayLength);
+            }
+// giorni dalla luna nuova di riferimento
+
+
+// fase 0–1
+const phase =
+  ((moonDays % synodicMonth) + synodicMonth) %
+  synodicMonth / synodicMonth;
+
+let offset;
+
+if (phase < 0.5) {
+  // Luna crescente
+  offset = (0.5 - phase) * 16;
+} else {
+  // Luna calante
+  offset = (phase - 0.5) * -16;
+}
+
+moonShadow.setAttribute("cx", offset);
+
+            /* ===== LANCETTE CLASSICHE ===== */
+            const s = now.getSeconds() + now.getMilliseconds() / 1000;
+            const m = now.getMinutes() + s / 60;
+            const h = (now.getHours() % 12) + m / 60;
+
+            secondHand.setAttribute(
+                "transform",
+                `rotate(${s * 6})`
+            );
+
+            minuteHand.setAttribute(
+                "transform",
+                `rotate(${m * 6})`
+            );
+
+            hourHand.setAttribute(
+                "transform",
+                `rotate(${h * 30})`
+            );
+
+            requestAnimationFrame(update);
+        }
+
+        update();
+    </script>
+
+</body>
+
+</html>
